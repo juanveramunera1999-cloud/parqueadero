@@ -129,7 +129,7 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA 2: REGISTRO DE CAJA Y PAGOS -->
+            <!-- PESTAÑA 2: REGISTRO DE CAJA Y PAGOS MENSUALES -->
             <div class="tab-pane fade" id="content-caja" role="tabpanel">
                 <div class="row">
                     <!-- Formulario de Movimiento de Caja -->
@@ -141,6 +141,11 @@
                             <div class="card-body">
                                 <form id="caja-form">
                                     <div class="mb-3">
+                                        <label for="caja-fecha-pago" class="form-label fw-bold">Fecha del Pago / Movimiento</label>
+                                        <input type="date" class="form-control" id="caja-fecha-pago" required>
+                                    </div>
+
+                                    <div class="mb-3">
                                         <label for="caja-tipo" class="form-label fw-bold">Tipo de Movimiento</label>
                                         <select class="form-select fw-bold" id="caja-tipo" required>
                                             <option value="ingreso" class="text-success">🟢 Ingreso (+)</option>
@@ -149,7 +154,7 @@
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="caja-zona" class="form-label">1. Seleccionar Zona / Ubicación</label>
+                                        <label for="caja-zona" class="form-label">1. Filtrar Zona / Ubicación</label>
                                         <select class="form-select" id="caja-zona">
                                             <option value="" selected>Todas las zonas</option>
                                             <option value="s">Sótano (S)</option>
@@ -190,8 +195,17 @@
                         </div>
                     </div>
 
-                    <!-- Tabla y Resumen de Caja -->
+                    <!-- Tabla y Resumen Mensual de Caja -->
                     <div class="col-md-8">
+                        <!-- Filtro de Mes -->
+                        <div class="card mb-3 border-0 shadow-sm bg-white">
+                            <div class="card-body py-2 d-flex align-items-center justify-content-between">
+                                <label for="filter-month" class="fw-bold me-2 mb-0"><i class="fas fa-calendar-alt text-primary"></i> Consultar Mes:</label>
+                                <input type="month" id="filter-month" class="form-control form-control-sm w-auto">
+                            </div>
+                        </div>
+
+                        <!-- Tarjetas de Resumen -->
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <div class="card bg-success text-white border-0 shadow-sm">
@@ -221,14 +235,14 @@
 
                         <div class="card shadow-sm border-0">
                             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0"><i class="fas fa-history me-1"></i> Historial de Movimientos</h5>
+                                <h5 class="mb-0"><i class="fas fa-history me-1"></i> Movimientos del Mes</h5>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover table-striped mb-0 align-middle text-center">
                                         <thead class="table-secondary">
                                             <tr>
-                                                <th>Fecha</th>
+                                                <th>Fecha Pago</th>
                                                 <th>Tipo</th>
                                                 <th>Cliente / Detalle</th>
                                                 <th>Medio / Comprobante</th>
@@ -242,7 +256,7 @@
                                         </tbody>
                                         <tfoot class="table-dark fw-bold">
                                             <tr>
-                                                <td colspan="4" class="text-end">BALANCE EN CAJA:</td>
+                                                <td colspan="4" class="text-end">BALANCE DEL MES:</td>
                                                 <td id="tfoot-balance">$0</td>
                                                 <td colspan="2"></td>
                                             </tr>
@@ -274,7 +288,6 @@
             measurementId: "G-326V9VQ3MH"
         };
 
-        // Inicializar Firebase Compat
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -297,6 +310,7 @@
         const tableBody = document.getElementById('clients-table-body');
 
         const cajaForm = document.getElementById('caja-form');
+        const cajaFechaPago = document.getElementById('caja-fecha-pago');
         const cajaTipo = document.getElementById('caja-tipo');
         const cajaZona = document.getElementById('caja-zona');
         const cajaCliente = document.getElementById('caja-cliente');
@@ -304,6 +318,12 @@
         const cajaMedio = document.getElementById('caja-medio');
         const cajaObs = document.getElementById('caja-observaciones');
         const cajaTableBody = document.getElementById('caja-table-body');
+        const filterMonth = document.getElementById('filter-month');
+
+        // Establecer fecha por defecto (Hoy y Mes Actual)
+        const today = new Date();
+        cajaFechaPago.value = today.toISOString().split('T')[0];
+        filterMonth.value = today.toISOString().slice(0, 7); // Formato YYYY-MM
 
         const formatMoney = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 
@@ -343,162 +363,4 @@
             dataToRender.forEach(client => {
                 const nombre = getVal(client, 'nombre', 'name', 'clientName');
                 const placa = getVal(client, 'placa', 'plate');
-                const modelo = getVal(client, 'modelo', 'model');
-                const ubicacion = getVal(client, 'ubicacion', 'location');
-                const fecha = getVal(client, 'fecha', 'date', 'nextPayment');
-                const obs = getVal(client, 'observaciones', 'obs', 'notes');
-
-                const ubFormatted = ubicacion ? ubicacion.toUpperCase() : 'N/A';
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="fw-bold">${nombre || 'Sin Nombre'}</td>
-                    <td><span class="badge bg-secondary">${placa || '---'}</span></td>
-                    <td>${modelo || '---'}</td>
-                    <td><span class="badge bg-danger badge-location">${ubFormatted}</span></td>
-                    <td>${fecha || '---'}</td>
-                    <td class="text-muted small">${obs || 'Ninguna'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${client.id}"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${client.id}"><i class="fas fa-trash-alt"></i></button>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-
-            document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => editClient(btn.dataset.id)));
-            document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => deleteClient(btn.dataset.id)));
-        }
-
-        function updateCajaClientesSelect() {
-            const zona = cajaZona.value.toLowerCase();
-            cajaCliente.innerHTML = '<option value="Otros / Gasto General">-- Ninguno / Gasto General --</option>';
-
-            const clientesFiltrados = zona 
-                ? clients.filter(c => {
-                    const ub = getVal(c, 'ubicacion', 'location').toLowerCase();
-                    return ub.startsWith(zona);
-                  })
-                : clients;
-
-            clientesFiltrados.forEach(c => {
-                const nombre = getVal(c, 'nombre', 'name', 'clientName');
-                const placa = getVal(c, 'placa', 'plate');
-                const ub = getVal(c, 'ubicacion', 'location').toUpperCase();
-                
-                const opt = document.createElement('option');
-                opt.value = `${nombre} (${placa}) - ${ub}`;
-                opt.textContent = `${ub} - ${nombre} [${placa}]`;
-                cajaCliente.appendChild(opt);
-            });
-        }
-
-        cajaZona.addEventListener('change', updateCajaClientesSelect);
-
-        function renderCaja() {
-            cajaTableBody.innerHTML = '';
-            let totalIngresos = 0;
-            let totalEgresos = 0;
-
-            if (movimientos.length === 0) {
-                cajaTableBody.innerHTML = `<tr><td colspan="7" class="text-muted py-4">No hay movimientos registrados en caja.</td></tr>`;
-            } else {
-                movimientos.forEach(m => {
-                    const isIngreso = m.tipo === 'ingreso';
-                    const val = parseInt(m.valor) || 0;
-                    
-                    if (isIngreso) totalIngresos += val;
-                    else totalEgresos += val;
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="small text-muted">${m.fechaRegistro || 'N/A'}</td>
-                        <td>
-                            <span class="badge ${isIngreso ? 'bg-success' : 'bg-danger'}">
-                                ${isIngreso ? 'INGRESO (+)' : 'EGRESO (-)'}
-                            </span>
-                        </td>
-                        <td class="fw-bold">${m.clienteDetail || 'General'}</td>
-                        <td><span class="badge bg-light text-dark border">${m.medio || 'Efectivo'}</span></td>
-                        <td class="fw-bold ${isIngreso ? 'text-success' : 'text-danger'}">
-                            ${isIngreso ? '+' : '-'}${formatMoney(val)}
-                        </td>
-                        <td class="small text-muted">${m.observaciones || '-'}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger btn-delete-mov" data-id="${m.id}"><i class="fas fa-trash-alt"></i></button>
-                        </td>
-                    `;
-                    cajaTableBody.appendChild(tr);
-                });
-
-                document.querySelectorAll('.btn-delete-mov').forEach(btn => btn.addEventListener('click', () => deleteMovimiento(btn.dataset.id)));
-            }
-
-            const balance = totalIngresos - totalEgresos;
-            document.getElementById('total-ingresos').textContent = formatMoney(totalIngresos);
-            document.getElementById('total-egresos').textContent = formatMoney(totalEgresos);
-            document.getElementById('total-balance').textContent = formatMoney(balance);
-            document.getElementById('tfoot-balance').textContent = formatMoney(balance);
-        }
-
-        // Firebase Realtime Listeners
-        db.collection("clientes_parqueadero").onSnapshot(snapshot => {
-            clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderTable();
-            updateCajaClientesSelect();
-        }, err => {
-            console.error("Error clientes:", err);
-            renderTable([]);
-        });
-
-        db.collection("caja_parqueadero").onSnapshot(snapshot => {
-            movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            movimientos.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
-            renderCaja();
-        }, err => {
-            console.error("Error caja:", err);
-            renderCaja();
-        });
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = clientIdInput.value;
-            const nuevaUbicacion = ubicacionSelect.value;
-
-            const ocupada = clients.find(c => getVal(c, 'ubicacion', 'location') === nuevaUbicacion && c.id !== id);
-            if (ocupada) {
-                alert(`¡Atención! El espacio ${nuevaUbicacion.toUpperCase()} ya está ocupado.`);
-                return;
-            }
-
-            const clientData = {
-                nombre: nombreInput.value.trim(),
-                placa: placaInput.value.trim().toUpperCase(),
-                modelo: modeloInput.value.trim(),
-                ubicacion: nuevaUbicacion,
-                fecha: fechaInput.value,
-                observaciones: observacionesInput.value.trim()
-            };
-
-            btnSave.disabled = true;
-            try {
-                if (id) await db.collection("clientes_parqueadero").doc(id).update(clientData);
-                else await db.collection("clientes_parqueadero").add(clientData);
-                resetForm();
-            } catch (err) { alert("Error al guardar cliente: " + err.message); }
-            finally { btnSave.disabled = false; }
-        });
-
-        cajaForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const valorNum = parseInt(cajaValor.value);
-            if (isNaN(valorNum) || valorNum <= 0) {
-                alert("Por favor ingresa un monto válido mayor a 0.");
-                return;
-            }
-
-            const now = new Date();
-            const fechaString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const movData = {
-                tipo: cajaTipo
+                const modelo
