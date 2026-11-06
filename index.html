@@ -81,7 +81,7 @@
 
                                     <div class="mb-3">
                                         <label for="observaciones" class="form-label">Observaciones</label>
-                                        <textarea class="form-control" id="observaciones" rows="2" placeholder="Ej. Casco guardado, paga puntual..."></textarea>
+                                        <textarea class="form-control" id="observaciones" rows="2" placeholder="Ej. Casco guardado..."></textarea>
                                     </div>
 
                                     <div class="d-grid gap-2">
@@ -166,7 +166,7 @@
                                         <select class="form-select" id="caja-cliente">
                                             <option value="Otros / Gasto General">-- Ninguno / Gasto General --</option>
                                         </select>
-                                        <small class="text-muted">Muestra los clientes según la zona elegida.</small>
+                                        <small class="text-muted">Despliega los clientes según la zona elegida.</small>
                                     </div>
 
                                     <!-- Valor -->
@@ -178,7 +178,7 @@
                                     <!-- Medio de Pago / Comprobante -->
                                     <div class="mb-3">
                                         <label for="caja-medio" class="form-label">Medio de Pago / Nº Comprobante</label>
-                                        <input type="text" class="form-control" id="caja-medio" placeholder="Ej. Nequi #09812 / Efectivo / Transf Bancolombia">
+                                        <input type="text" class="form-control" id="caja-medio" placeholder="Ej. Nequi #09812 / Efectivo">
                                     </div>
 
                                     <!-- Observaciones -->
@@ -251,7 +251,7 @@
                                         </tbody>
                                         <tfoot class="table-dark fw-bold">
                                             <tr>
-                                                <td colspan="4" class="text-end">TOTALES EN CAJA:</td>
+                                                <td colspan="4" class="text-end">BALANCE EN CAJA:</td>
                                                 <td id="tfoot-balance">$0</td>
                                                 <td colspan="2"></td>
                                             </tr>
@@ -277,7 +277,6 @@
             getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // TUS CREDENCIALES CONFIGURADAS
         const firebaseConfig = {
             apiKey: "AIzaSyBngeJ8WbnrFdHYnzg_9aE0PgiWQzmd_qA",
             authDomain: "control-y-cobro-parqueadero.firebaseapp.com",
@@ -291,14 +290,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        // Colecciones de Firestore
         const clientsCollection = collection(db, "clientes_parqueadero");
         const cajaCollection = collection(db, "caja_parqueadero");
 
         let clients = [];
         let movimientos = [];
 
-        // DOM Elements - Clientes
+        // Elementos DOM
         const form = document.getElementById('parking-form');
         const clientIdInput = document.getElementById('client-id');
         const nombreInput = document.getElementById('nombre');
@@ -313,7 +311,6 @@
         const searchInput = document.getElementById('search-input');
         const tableBody = document.getElementById('clients-table-body');
 
-        // DOM Elements - Caja
         const cajaForm = document.getElementById('caja-form');
         const cajaTipo = document.getElementById('caja-tipo');
         const cajaZona = document.getElementById('caja-zona');
@@ -323,5 +320,266 @@
         const cajaObs = document.getElementById('caja-observaciones');
         const cajaTableBody = document.getElementById('caja-table-body');
 
-        // Formateador de moneda
-        const formatMoney = (val) => new Intl.Number
+        const formatMoney = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
+
+        function generateLocationOptions() {
+            ubicacionSelect.innerHTML = '<option value="" disabled selected>Seleccione la ubicación...</option>';
+            const addGroup = (label, prefix, max) => {
+                let optGroup = document.createElement('optgroup');
+                optGroup.label = label;
+                for (let i = 1; i <= max; i++) {
+                    let opt = document.createElement('option');
+                    opt.value = `${prefix}${i}`;
+                    opt.textContent = `${label.split(' ')[0]} - Espacio ${prefix.toUpperCase()}${i}`;
+                    optGroup.appendChild(opt);
+                }
+                ubicacionSelect.appendChild(optGroup);
+            };
+
+            addGroup('Sótano (S)', 's', 11);
+            addGroup('Piso (P)', 'p', 15);
+            addGroup('Trasero (T)', 't', 10);
+        }
+
+        // Obtener valor de cualquier campo sin importar cómo se guardó en Firebase
+        const getVal = (obj, ...keys) => {
+            for (let k of keys) {
+                if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+            }
+            return '';
+        };
+
+        function renderTable(dataToRender = clients) {
+            tableBody.innerHTML = '';
+            if (dataToRender.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="text-muted py-4">No hay clientes registrados en la nube.</td></tr>`;
+                return;
+            }
+
+            dataToRender.forEach(client => {
+                const nombre = getVal(client, 'nombre', 'name', 'clientName');
+                const placa = getVal(client, 'placa', 'plate');
+                const modelo = getVal(client, 'modelo', 'model');
+                const ubicacion = getVal(client, 'ubicacion', 'location');
+                const fecha = getVal(client, 'fecha', 'date', 'nextPayment');
+                const obs = getVal(client, 'observaciones', 'obs', 'notes');
+
+                const ubFormatted = ubicacion ? ubicacion.toUpperCase() : 'N/A';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold">${nombre || 'Sin Nombre'}</td>
+                    <td><span class="badge bg-secondary">${placa || '---'}</span></td>
+                    <td>${modelo || '---'}</td>
+                    <td><span class="badge bg-danger badge-location">${ubFormatted}</span></td>
+                    <td>${fecha || '---'}</td>
+                    <td class="text-muted small">${obs || 'Ninguna'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${client.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${client.id}"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => editClient(btn.dataset.id)));
+            document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => deleteClient(btn.dataset.id)));
+        }
+
+        function updateCajaClientesSelect() {
+            const zona = cajaZona.value.toLowerCase();
+            cajaCliente.innerHTML = '<option value="Otros / Gasto General">-- Ninguno / Gasto General --</option>';
+
+            const clientesFiltrados = zona 
+                ? clients.filter(c => {
+                    const ub = getVal(c, 'ubicacion', 'location').toLowerCase();
+                    return ub.startsWith(zona);
+                  })
+                : clients;
+
+            clientesFiltrados.forEach(c => {
+                const nombre = getVal(c, 'nombre', 'name', 'clientName');
+                const placa = getVal(c, 'placa', 'plate');
+                const ub = getVal(c, 'ubicacion', 'location').toUpperCase();
+                
+                const opt = document.createElement('option');
+                opt.value = `${nombre} (${placa}) - ${ub}`;
+                opt.textContent = `${ub} - ${nombre} [${placa}]`;
+                cajaCliente.appendChild(opt);
+            });
+        }
+
+        cajaZona.addEventListener('change', updateCajaClientesSelect);
+
+        function renderCaja() {
+            cajaTableBody.innerHTML = '';
+            let totalIngresos = 0;
+            let totalEgresos = 0;
+
+            if (movimientos.length === 0) {
+                cajaTableBody.innerHTML = `<tr><td colspan="7" class="text-muted py-4">No hay movimientos registrados en caja.</td></tr>`;
+            } else {
+                movimientos.forEach(m => {
+                    const isIngreso = m.tipo === 'ingreso';
+                    const val = parseInt(m.valor) || 0;
+                    
+                    if (isIngreso) totalIngresos += val;
+                    else totalEgresos += val;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="small text-muted">${m.fechaRegistro || 'N/A'}</td>
+                        <td>
+                            <span class="badge ${isIngreso ? 'bg-success' : 'bg-danger'}">
+                                ${isIngreso ? 'INGRESO (+)' : 'EGRESO (-)'}
+                            </span>
+                        </td>
+                        <td class="fw-bold">${m.clienteDetail || 'General'}</td>
+                        <td><span class="badge bg-light text-dark border">${m.medio || 'Efectivo'}</span></td>
+                        <td class="fw-bold ${isIngreso ? 'text-success' : 'text-danger'}">
+                            ${isIngreso ? '+' : '-'}${formatMoney(val)}
+                        </td>
+                        <td class="small text-muted">${m.observaciones || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger btn-delete-mov" data-id="${m.id}"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    `;
+                    cajaTableBody.appendChild(tr);
+                });
+
+                document.querySelectorAll('.btn-delete-mov').forEach(btn => btn.addEventListener('click', () => deleteMovimiento(btn.dataset.id)));
+            }
+
+            const balance = totalIngresos - totalEgresos;
+            document.getElementById('total-ingresos').textContent = formatMoney(totalIngresos);
+            document.getElementById('total-egresos').textContent = formatMoney(totalEgresos);
+            document.getElementById('total-balance').textContent = formatMoney(balance);
+            document.getElementById('tfoot-balance').textContent = formatMoney(balance);
+        }
+
+        onSnapshot(clientsCollection, (snapshot) => {
+            clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTable();
+            updateCajaClientesSelect();
+        });
+
+        onSnapshot(cajaCollection, (snapshot) => {
+            movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            movimientos.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+            renderCaja();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = clientIdInput.value;
+            const nuevaUbicacion = ubicacionSelect.value;
+
+            const ocupada = clients.find(c => getVal(c, 'ubicacion', 'location') === nuevaUbicacion && c.id !== id);
+            if (ocupada) {
+                alert(`¡Atención! El espacio ${nuevaUbicacion.toUpperCase()} ya está ocupado.`);
+                return;
+            }
+
+            const clientData = {
+                nombre: nombreInput.value.trim(),
+                placa: placaInput.value.trim().toUpperCase(),
+                modelo: modeloInput.value.trim(),
+                ubicacion: nuevaUbicacion,
+                fecha: fechaInput.value,
+                observaciones: observacionesInput.value.trim()
+            };
+
+            btnSave.disabled = true;
+            try {
+                if (id) await updateDoc(doc(db, "clientes_parqueadero", id), clientData);
+                else await addDoc(clientsCollection, clientData);
+                resetForm();
+            } catch (err) { alert("Error al guardar cliente."); }
+            finally { btnSave.disabled = false; }
+        });
+
+        cajaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const valorNum = parseInt(cajaValor.value);
+            if (isNaN(valorNum) || valorNum <= 0) {
+                alert("Por favor ingresa un monto válido mayor a 0.");
+                return;
+            }
+
+            const now = new Date();
+            const fechaString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const movData = {
+                tipo: cajaTipo.value,
+                clienteDetail: cajaCliente.value,
+                valor: valorNum,
+                medio: cajaMedio.value.trim(),
+                observaciones: cajaObs.value.trim(),
+                fechaRegistro: fechaString,
+                timestamp: now.toISOString()
+            };
+
+            try {
+                await addDoc(cajaCollection, movData);
+                cajaForm.reset();
+                cajaTipo.value = 'ingreso';
+                updateCajaClientesSelect();
+            } catch (err) {
+                alert("Error al guardar el movimiento en caja.");
+            }
+        });
+
+        async function deleteClient(id) {
+            if (confirm('¿Estás seguro de eliminar este cliente?')) {
+                await deleteDoc(doc(db, "clientes_parqueadero", id));
+            }
+        }
+
+        async function deleteMovimiento(id) {
+            if (confirm('¿Deseas eliminar este registro de caja?')) {
+                await deleteDoc(doc(db, "caja_parqueadero", id));
+            }
+        }
+
+        function editClient(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            clientIdInput.value = client.id;
+            nombreInput.value = getVal(client, 'nombre', 'name', 'clientName');
+            placaInput.value = getVal(client, 'placa', 'plate');
+            modeloInput.value = getVal(client, 'modelo', 'model');
+            ubicacionSelect.value = getVal(client, 'ubicacion', 'location');
+            fechaInput.value = getVal(client, 'fecha', 'date', 'nextPayment');
+            observacionesInput.value = getVal(client, 'observaciones', 'obs', 'notes');
+
+            formTitle.innerHTML = '<i class="fas fa-user-edit"></i> Modificar Cliente';
+            btnSave.className = 'btn btn-warning text-white';
+            btnCancel.classList.remove('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            form.reset();
+            clientIdInput.value = '';
+            formTitle.innerHTML = '<i class="fas fa-user-plus"></i> Registrar Cliente';
+            btnSave.className = 'btn btn-success';
+            btnCancel.classList.add('d-none');
+        }
+
+        btnCancel.addEventListener('click', resetForm);
+
+        searchInput.addEventListener('keyup', () => {
+            const query = searchInput.value.toLowerCase();
+            const filtered = clients.filter(c => {
+                const n = getVal(c, 'nombre', 'name').toLowerCase();
+                const p = getVal(c, 'placa', 'plate').toLowerCase();
+                const u = getVal(c, 'ubicacion', 'location').toLowerCase();
+                return n.includes(query) || p.includes(query) || u.includes(query);
+            });
+            renderTable(filtered);
+        });
+
+        generateLocationOptions();
+    </script>
+</body>
+</html>
