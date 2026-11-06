@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Mensualidades - Parqueadero</title>
+    <title>Control de Mensualidades y Caja - Parqueadero</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .badge-location { font-size: 0.9rem; }
+        .nav-pills .nav-link.active { background-color: #0d6efd; }
     </style>
 </head>
 <body class="bg-light">
@@ -17,105 +18,257 @@
     <div class="container py-4">
         <header class="pb-3 mb-4 border-bottom text-center">
             <h1 class="h3 fw-bold text-primary">
-                <i class="fas fa-motorcycle"></i> Control de Parqueadero (Sincronizado en Nube)
+                <i class="fas fa-motorcycle"></i> Control de Parqueadero y Caja
             </h1>
-            <p class="text-muted m-0">Gestión de clientes y ubicaciones en tiempo real</p>
+            <p class="text-muted m-0">Gestión de mensualidades, registro de clientes y control de flujo de caja</p>
         </header>
 
-        <div class="row">
-            <!-- Formulario de Registro / Edición -->
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0" id="form-title"><i class="fas fa-user-plus"></i> Registrar Cliente</h5>
+        <!-- Navegación entre Pestañas -->
+        <ul class="nav nav-pills nav-fill mb-4 bg-white p-2 rounded shadow-sm" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="tab-clientes" data-bs-toggle="tab" data-bs-target="#content-clientes" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Gestión de Clientes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-caja" data-bs-toggle="tab" data-bs-target="#content-caja" type="button" role="tab">
+                    <i class="fas fa-cash-register me-2"></i>Registro de Caja (Pagos)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabsContent">
+
+            <!-- PESTAÑA 1: GESTIÓN DE CLIENTES -->
+            <div class="tab-pane fade show active" id="content-clientes" role="tabpanel">
+                <div class="row">
+                    <!-- Formulario Cliente -->
+                    <div class="col-md-4 mb-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0" id="form-title"><i class="fas fa-user-plus"></i> Registrar Cliente</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="parking-form">
+                                    <input type="hidden" id="client-id">
+                                    
+                                    <div class="mb-3">
+                                        <label for="nombre" class="form-label">Nombre del Cliente</label>
+                                        <input type="text" class="form-control" id="nombre" required placeholder="Ej. Carlos Pérez">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="placa" class="form-label">Placa de la Moto</label>
+                                        <input type="text" class="form-control text-uppercase" id="placa" required placeholder="Ej. ABC-12D">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="modelo" class="form-label">Modelo / Marca</label>
+                                        <input type="text" class="form-control" id="modelo" required placeholder="Ej. Yamaha FZ 150">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="ubicacion" class="form-label">
+                                            <i class="fas fa-map-marker-alt text-danger"></i> Ubicación en Parqueadero
+                                        </label>
+                                        <select class="form-select" id="ubicacion" required></select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="fecha" class="form-label">Fecha de Cobro Mensual</label>
+                                        <input type="date" class="form-control" id="fecha" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="observaciones" class="form-label">Observaciones</label>
+                                        <textarea class="form-control" id="observaciones" rows="2" placeholder="Ej. Casco guardado, paga puntual..."></textarea>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success" id="btn-save">
+                                            <i class="fas fa-cloud-upload-alt"></i> Guardar Cliente
+                                        </button>
+                                        <button type="button" class="btn btn-secondary d-none" id="btn-cancel">
+                                            <i class="fas fa-times"></i> Cancelar Edición
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <form id="parking-form">
-                            <input type="hidden" id="client-id">
-                            
-                            <div class="mb-3">
-                                <label for="nombre" class="form-label">Nombre del Cliente</label>
-                                <input type="text" class="form-control" id="nombre" required placeholder="Ej. Carlos Pérez">
-                            </div>
 
-                            <div class="mb-3">
-                                <label for="placa" class="form-label">Placa de la Moto</label>
-                                <input type="text" class="form-control text-uppercase" id="placa" required placeholder="Ej. ABC-12D">
+                    <!-- Tabla Clientes -->
+                    <div class="col-md-8">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-list"></i> Motos Registradas</h5>
+                                <input type="text" id="search-input" class="form-control form-control-sm w-50" placeholder="Buscar por placa, nombre o ubicación...">
                             </div>
-
-                            <div class="mb-3">
-                                <label for="modelo" class="form-label">Modelo / Marca</label>
-                                <input type="text" class="form-control" id="modelo" required placeholder="Ej. Yamaha FZ 150">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped mb-0 align-middle text-center">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Placa</th>
+                                                <th>Modelo</th>
+                                                <th>Ubicación</th>
+                                                <th>Próximo Cobro</th>
+                                                <th>Observaciones</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="clients-table-body">
+                                            <tr><td colspan="7" class="py-4 text-muted">Cargando datos...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-
-                            <div class="mb-3">
-                                <label for="ubicacion" class="form-label">
-                                    <i class="fas fa-map-marker-alt text-danger"></i> Ubicación en Parqueadero
-                                </label>
-                                <select class="form-select" id="ubicacion" required>
-                                    <!-- Generado dinámicamente -->
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="fecha" class="form-label">Fecha de Cobro Mensual</label>
-                                <input type="date" class="form-control" id="fecha" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="observaciones" class="form-label">Observaciones</label>
-                                <textarea class="form-control" id="observaciones" rows="2" placeholder="Ej. Casco guardado, paga puntual..."></textarea>
-                            </div>
-
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-success" id="btn-save">
-                                    <i class="fas fa-cloud-upload-alt"></i> Guardar en Nube
-                                </button>
-                                <button type="button" class="btn btn-secondary d-none" id="btn-cancel">
-                                    <i class="fas fa-times"></i> Cancelar Edición
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla de Clientes -->
-            <div class="col-md-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list"></i> Motos Registradas</h5>
-                        <input type="text" id="search-input" class="form-control form-control-sm w-50" placeholder="Buscar por placa, nombre o ubicación...">
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0 align-middle text-center">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Placa</th>
-                                        <th>Modelo</th>
-                                        <th>Ubicación</th>
-                                        <th>Próximo Cobro</th>
-                                        <th>Observaciones</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="clients-table-body">
-                                    <tr>
-                                        <td colspan="7" class="py-4 text-muted">
-                                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                                            Conectando con la base de datos...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- PESTAÑA 2: REGISTRO DE CAJA Y PAGOS -->
+            <div class="tab-pane fade" id="content-caja" role="tabpanel">
+                <div class="row">
+                    <!-- Formulario de Movimiento de Caja -->
+                    <div class="col-md-4 mb-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-receipt"></i> Registrar Transacción</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="caja-form">
+                                    <!-- Tipo de movimiento -->
+                                    <div class="mb-3">
+                                        <label for="caja-tipo" class="form-label fw-bold">Tipo de Movimiento</label>
+                                        <select class="form-select fw-bold" id="caja-tipo" required>
+                                            <option value="ingreso" class="text-success">🟢 Ingreso (+)</option>
+                                            <option value="egreso" class="text-danger">🔴 Egreso (-)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Filtrar Zona / Piso -->
+                                    <div class="mb-3">
+                                        <label for="caja-zona" class="form-label">1. Seleccionar Zona / Ubicación</label>
+                                        <select class="form-select" id="caja-zona">
+                                            <option value="" selected>Todas las zonas</option>
+                                            <option value="s">Sótano (S)</option>
+                                            <option value="p">Piso (P)</option>
+                                            <option value="t">Trasero (T)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Cliente Filtrado -->
+                                    <div class="mb-3">
+                                        <label for="caja-cliente" class="form-label">2. Cliente Relacionado</label>
+                                        <select class="form-select" id="caja-cliente">
+                                            <option value="Otros / Gasto General">-- Ninguno / Gasto General --</option>
+                                        </select>
+                                        <small class="text-muted">Muestra los clientes según la zona elegida.</small>
+                                    </div>
+
+                                    <!-- Valor -->
+                                    <div class="mb-3">
+                                        <label for="caja-valor" class="form-label fw-bold">Valor Cancela / Monto ($)</label>
+                                        <input type="number" step="1" min="0" class="form-control form-control-lg fw-bold" id="caja-valor" required placeholder="Ej. 50000">
+                                    </div>
+
+                                    <!-- Medio de Pago / Comprobante -->
+                                    <div class="mb-3">
+                                        <label for="caja-medio" class="form-label">Medio de Pago / Nº Comprobante</label>
+                                        <input type="text" class="form-control" id="caja-medio" placeholder="Ej. Nequi #09812 / Efectivo / Transf Bancolombia">
+                                    </div>
+
+                                    <!-- Observaciones -->
+                                    <div class="mb-3">
+                                        <label for="caja-observaciones" class="form-label">Observaciones</label>
+                                        <textarea class="form-control" id="caja-observaciones" rows="2" placeholder="Ej. Pago mensualidad Septiembre..."></textarea>
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary" id="btn-save-caja">
+                                            <i class="fas fa-save me-1"></i> Guardar Movimiento
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla y Resumen de Caja -->
+                    <div class="col-md-8">
+                        <!-- Tarjetas de Resumen -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="card bg-success text-white border-0 shadow-sm">
+                                    <div class="card-body py-2 text-center">
+                                        <small class="text-uppercase fw-bold">Total Ingresos</small>
+                                        <h4 class="mb-0 fw-bold" id="total-ingresos">$0</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-danger text-white border-0 shadow-sm">
+                                    <div class="card-body py-2 text-center">
+                                        <small class="text-uppercase fw-bold">Total Egresos</small>
+                                        <h4 class="mb-0 fw-bold" id="total-egresos">$0</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-dark text-white border-0 shadow-sm">
+                                    <div class="card-body py-2 text-center">
+                                        <small class="text-uppercase fw-bold">Balance Neto</small>
+                                        <h4 class="mb-0 fw-bold" id="total-balance">$0</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Transacciones -->
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-history me-1"></i> Historial de Movimientos</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped mb-0 align-middle text-center">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Tipo</th>
+                                                <th>Cliente / Detalle</th>
+                                                <th>Medio / Comprobante</th>
+                                                <th>Valor ($)</th>
+                                                <th>Observación</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="caja-table-body">
+                                            <tr><td colspan="7" class="py-4 text-muted">Cargando movimientos...</td></tr>
+                                        </tbody>
+                                        <tfoot class="table-dark fw-bold">
+                                            <tr>
+                                                <td colspan="4" class="text-end">TOTALES EN CAJA:</td>
+                                                <td id="tfoot-balance">$0</td>
+                                                <td colspan="2"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Firebase SDK Modular -->
     <script type="module">
@@ -137,11 +290,15 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
+        // Colecciones de Firestore
         const clientsCollection = collection(db, "clientes_parqueadero");
+        const cajaCollection = collection(db, "caja_parqueadero");
 
         let clients = [];
+        let movimientos = [];
 
-        // Elementos DOM
+        // DOM Elements - Clientes
         const form = document.getElementById('parking-form');
         const clientIdInput = document.getElementById('client-id');
         const nombreInput = document.getElementById('nombre');
@@ -156,162 +313,15 @@
         const searchInput = document.getElementById('search-input');
         const tableBody = document.getElementById('clients-table-body');
 
-        function generateLocationOptions() {
-            ubicacionSelect.innerHTML = '<option value="" disabled selected>Seleccione la ubicación...</option>';
-            const addGroup = (label, prefix, max) => {
-                let optGroup = document.createElement('optgroup');
-                optGroup.label = label;
-                for (let i = 1; i <= max; i++) {
-                    let opt = document.createElement('option');
-                    opt.value = `${prefix}${i}`;
-                    opt.textContent = `${label.split(' ')[0]} - Espacio ${prefix.toUpperCase()}${i}`;
-                    optGroup.appendChild(opt);
-                }
-                ubicacionSelect.appendChild(optGroup);
-            };
+        // DOM Elements - Caja
+        const cajaForm = document.getElementById('caja-form');
+        const cajaTipo = document.getElementById('caja-tipo');
+        const cajaZona = document.getElementById('caja-zona');
+        const cajaCliente = document.getElementById('caja-cliente');
+        const cajaValor = document.getElementById('caja-valor');
+        const cajaMedio = document.getElementById('caja-medio');
+        const cajaObs = document.getElementById('caja-observaciones');
+        const cajaTableBody = document.getElementById('caja-table-body');
 
-            addGroup('Sótano (S)', 's', 11);
-            addGroup('Piso (P)', 'p', 15);
-            addGroup('Trasero (T)', 't', 10);
-        }
-
-        function renderTable(dataToRender = clients) {
-            tableBody.innerHTML = '';
-            if (dataToRender.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="7" class="text-muted py-4">No hay clientes registrados en la nube.</td></tr>`;
-                return;
-            }
-
-            dataToRender.forEach(client => {
-                const ubFormatted = client.ubicacion ? client.ubicacion.toUpperCase() : 'N/A';
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="fw-bold">${client.nombre}</td>
-                    <td><span class="badge bg-secondary">${client.placa}</span></td>
-                    <td>${client.modelo}</td>
-                    <td><span class="badge bg-danger badge-location">${ubFormatted}</span></td>
-                    <td>${client.fecha}</td>
-                    <td class="text-muted small">${client.observaciones || 'Ninguna'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${client.id}" title="Modificar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${client.id}" title="Borrar">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-
-            document.querySelectorAll('.btn-edit').forEach(btn => {
-                btn.addEventListener('click', () => editClient(btn.dataset.id));
-            });
-            document.querySelectorAll('.btn-delete').forEach(btn => {
-                btn.addEventListener('click', () => deleteClient(btn.dataset.id));
-            });
-        }
-
-        // Escuchar cambios en tiempo real
-        onSnapshot(clientsCollection, (snapshot) => {
-            clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderTable();
-        }, (error) => {
-            console.error("Error al conectar: ", error);
-            tableBody.innerHTML = `<tr><td colspan="7" class="text-danger py-4">Revisa la pestaña de Reglas en Firestore.</td></tr>`;
-        });
-
-        // Guardar o actualizar registro
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = clientIdInput.value;
-            const nuevaUbicacion = ubicacionSelect.value;
-
-            const ocupada = clients.find(c => c.ubicacion === nuevaUbicacion && c.id !== id);
-            if (ocupada) {
-                alert(`¡Atención! El espacio ${nuevaUbicacion.toUpperCase()} ya está ocupado por la moto ${ocupada.placa} (${ocupada.nombre}).`);
-                return;
-            }
-
-            const clientData = {
-                nombre: nombreInput.value.trim(),
-                placa: placaInput.value.trim().toUpperCase(),
-                modelo: modeloInput.value.trim(),
-                ubicacion: nuevaUbicacion,
-                fecha: fechaInput.value,
-                observaciones: observacionesInput.value.trim()
-            };
-
-            btnSave.disabled = true;
-            btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
-
-            try {
-                if (id) {
-                    await updateDoc(doc(db, "clientes_parqueadero", id), clientData);
-                } else {
-                    await addDoc(clientsCollection, clientData);
-                }
-                resetForm();
-            } catch (error) {
-                console.error("Error al guardar: ", error);
-                alert("Ocurrió un error al guardar los datos. Verifica las reglas de Firestore.");
-            } finally {
-                btnSave.disabled = false;
-                btnSave.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Guardar en Nube';
-            }
-        });
-
-        function editClient(id) {
-            const client = clients.find(c => c.id === id);
-            if (!client) return;
-            clientIdInput.value = client.id;
-            nombreInput.value = client.nombre;
-            placaInput.value = client.placa;
-            modeloInput.value = client.modelo;
-            ubicacionSelect.value = client.ubicacion;
-            fechaInput.value = client.fecha;
-            observacionesInput.value = client.observaciones || '';
-
-            formTitle.innerHTML = '<i class="fas fa-user-edit"></i> Modificar Cliente';
-            btnSave.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar en Nube';
-            btnSave.className = 'btn btn-warning text-white';
-            btnCancel.classList.remove('d-none');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        async function deleteClient(id) {
-            if (confirm('¿Estás seguro de eliminar este cliente de la nube?')) {
-                try {
-                    await deleteDoc(doc(db, "clientes_parqueadero", id));
-                } catch (error) {
-                    console.error("Error al eliminar: ", error);
-                    alert("Error al eliminar.");
-                }
-            }
-        }
-
-        function resetForm() {
-            form.reset();
-            clientIdInput.value = '';
-            formTitle.innerHTML = '<i class="fas fa-user-plus"></i> Registrar Cliente';
-            btnSave.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Guardar en Nube';
-            btnSave.className = 'btn btn-success';
-            btnCancel.classList.add('d-none');
-        }
-
-        btnCancel.addEventListener('click', resetForm);
-
-        searchInput.addEventListener('keyup', () => {
-            const query = searchInput.value.toLowerCase();
-            const filtered = clients.filter(c => 
-                c.nombre.toLowerCase().includes(query) || 
-                c.placa.toLowerCase().includes(query) ||
-                c.ubicacion.toLowerCase().includes(query)
-            );
-            renderTable(filtered);
-        });
-
-        generateLocationOptions();
-    </script>
-</body>
-</html>
+        // Formateador de moneda
+        const formatMoney = (val) => new Intl.Number
