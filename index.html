@@ -1,16 +1,38 @@
-<!DOCTYPE html>
+
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Mensualidades y Caja - Parqueadero</title>
+    <title>Control de Mensualidades, Ubicaciones y Caja - Parqueadero</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .badge-location { font-size: 0.9rem; }
         .nav-pills .nav-link.active { background-color: #0d6efd; }
+        .slot-card {
+            transition: all 0.2s ease-in-out;
+            border-width: 2px;
+        }
+        .slot-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        .slot-free {
+            border-color: #198754 !important;
+            background-color: #f8fff9;
+        }
+        .slot-occupied {
+            border-color: #dc3545 !important;
+            background-color: #fff8f8;
+        }
+        .slot-badge-free {
+            background-color: #198754;
+        }
+        .slot-badge-occupied {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -18,9 +40,9 @@
     <div class="container py-4">
         <header class="pb-3 mb-4 border-bottom text-center">
             <h1 class="h3 fw-bold text-primary">
-                <i class="fas fa-motorcycle"></i> Control de Parqueadero y Caja
+                <i class="fas fa-motorcycle me-2"></i>Control de Parqueadero, Ubicaciones y Caja
             </h1>
-            <p class="text-muted m-0">Gestión de mensualidades, registro de clientes y control de flujo de caja</p>
+            <p class="text-muted m-0">Gestión de mensualidades, distribución de espacios y control financiero</p>
         </header>
 
         <!-- Navegación entre Pestañas -->
@@ -28,6 +50,11 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active fw-bold" id="tab-clientes" data-bs-toggle="tab" data-bs-target="#content-clientes" type="button" role="tab">
                     <i class="fas fa-users me-2"></i>Gestión de Clientes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-mapa" data-bs-toggle="tab" data-bs-target="#content-mapa" type="button" role="tab">
+                    <i class="fas fa-th me-2"></i>Mapa / Informe de Ubicaciones
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -46,7 +73,7 @@
                     <div class="col-md-4 mb-4">
                         <div class="card shadow-sm border-0">
                             <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0" id="form-title"><i class="fas fa-user-plus"></i> Registrar Cliente</h5>
+                                <h5 class="mb-0" id="form-title"><i class="fas fa-user-plus me-1"></i> Registrar Cliente</h5>
                             </div>
                             <div class="card-body">
                                 <form id="parking-form">
@@ -86,10 +113,10 @@
 
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-success" id="btn-save">
-                                            <i class="fas fa-cloud-upload-alt"></i> Guardar Cliente
+                                            <i class="fas fa-cloud-upload-alt me-1"></i> Guardar Cliente
                                         </button>
                                         <button type="button" class="btn btn-secondary d-none" id="btn-cancel">
-                                            <i class="fas fa-times"></i> Cancelar Edición
+                                            <i class="fas fa-times me-1"></i> Cancelar Edición
                                         </button>
                                     </div>
                                 </form>
@@ -101,7 +128,7 @@
                     <div class="col-md-8">
                         <div class="card shadow-sm border-0">
                             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0"><i class="fas fa-list"></i> Motos Registradas</h5>
+                                <h5 class="mb-0"><i class="fas fa-list me-1"></i> Motos Registradas</h5>
                                 <input type="text" id="search-input" class="form-control form-control-sm w-50" placeholder="Buscar por placa, nombre o ubicación...">
                             </div>
                             <div class="card-body p-0">
@@ -129,14 +156,91 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA 2: REGISTRO DE CAJA Y PAGOS MENSUALES -->
+            <!-- PESTAÑA 2: MAPA / INFORME DE UBICACIONES -->
+            <div class="tab-pane fade" id="content-mapa" role="tabpanel">
+                
+                <!-- Resumen estadístico de ocupación -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-2">
+                        <div class="card border-0 shadow-sm bg-primary text-white text-center py-2">
+                            <small class="text-uppercase fw-bold">Capacidad Total</small>
+                            <h3 class="mb-0 fw-bold">36 Espacios</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <div class="card border-0 shadow-sm bg-danger text-white text-center py-2">
+                            <small class="text-uppercase fw-bold">Ocupados</small>
+                            <h3 class="mb-0 fw-bold" id="stats-ocupados">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <div class="card border-0 shadow-sm bg-success text-white text-center py-2">
+                            <small class="text-uppercase fw-bold">Disponibles</small>
+                            <h3 class="mb-0 fw-bold" id="stats-libres">36</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <div class="card border-0 shadow-sm bg-dark text-white text-center py-2">
+                            <small class="text-uppercase fw-bold">% Ocupación</small>
+                            <h3 class="mb-0 fw-bold" id="stats-porcentaje">0%</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtro rápido por Zona -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0"><i class="fas fa-layer-group text-primary me-2"></i>Distribución de Ubicaciones</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="filter-zone-all">Todas</button>
+                        <button type="button" class="btn btn-outline-primary" id="filter-zone-s">Sótano (S)</button>
+                        <button type="button" class="btn btn-outline-primary" id="filter-zone-p">Piso (P)</button>
+                        <button type="button" class="btn btn-outline-primary" id="filter-zone-t">Trasero (T)</button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN SÓTANO (S1 - S11) -->
+                <div class="card mb-4 border-0 shadow-sm zone-section" id="zone-section-s">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-warehouse text-warning me-2"></i>Sótano (S) - 11 Espacios</h6>
+                        <span class="badge bg-secondary" id="badge-count-s">0/11 Ocupados</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3" id="grid-sotano"></div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN PISO (P1 - P15) -->
+                <div class="card mb-4 border-0 shadow-sm zone-section" id="zone-section-p">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-building text-info me-2"></i>Piso Principal (P) - 15 Espacios</h6>
+                        <span class="badge bg-secondary" id="badge-count-p">0/15 Ocupados</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3" id="grid-piso"></div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN TRASERO (T1 - T10) -->
+                <div class="card mb-4 border-0 shadow-sm zone-section" id="zone-section-t">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-parking text-success me-2"></i>Patio Trasero (T) - 10 Espacios</h6>
+                        <span class="badge bg-secondary" id="badge-count-t">0/10 Ocupados</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3" id="grid-trasero"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PESTAÑA 3: REGISTRO DE CAJA Y PAGOS MENSUALES -->
             <div class="tab-pane fade" id="content-caja" role="tabpanel">
                 <div class="row">
                     <!-- Formulario de Movimiento de Caja -->
                     <div class="col-md-4 mb-4">
                         <div class="card shadow-sm border-0">
                             <div class="card-header bg-success text-white">
-                                <h5 class="mb-0"><i class="fas fa-receipt"></i> Registrar Transacción</h5>
+                                <h5 class="mb-0"><i class="fas fa-receipt me-1"></i> Registrar Transacción</h5>
                             </div>
                             <div class="card-body">
                                 <form id="caja-form">
@@ -200,7 +304,7 @@
                         <!-- Filtro de Mes -->
                         <div class="card mb-3 border-0 shadow-sm bg-white">
                             <div class="card-body py-2 d-flex align-items-center justify-content-between">
-                                <label for="filter-month" class="fw-bold me-2 mb-0"><i class="fas fa-calendar-alt text-primary"></i> Consultar Mes:</label>
+                                <label for="filter-month" class="fw-bold me-2 mb-0"><i class="fas fa-calendar-alt text-primary me-1"></i> Consultar Mes:</label>
                                 <input type="month" id="filter-month" class="form-control form-control-sm w-auto">
                             </div>
                         </div>
@@ -272,6 +376,23 @@
         </div>
     </div>
 
+    <!-- Modal personalizado para Alertas y Confirmaciones (Sin usar alert / confirm) -->
+    <div class="modal fade" id="appModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="card border-0 shadow w-100">
+                <div class="card-header bg-primary text-white fw-bold d-flex align-items-center" id="modal-header">
+                    <i class="fas fa-info-circle me-2"></i> <span id="modal-title">Mensaje</span>
+                </div>
+                <div class="card-body py-4 text-center" id="modal-body">
+                    ...
+                </div>
+                <div class="card-footer bg-light text-end" id="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts CDN Bootstrap y Firebase Modular -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -300,6 +421,14 @@
         let clients = [];
         let movimientos = [];
 
+        // Definición de estructura de zonas
+        const ZONES = [
+            { key: 's', label: 'Sótano (S)', prefix: 's', max: 11, containerId: 'grid-sotano', badgeId: 'badge-count-s', sectionId: 'zone-section-s' },
+            { key: 'p', label: 'Piso (P)', prefix: 'p', max: 15, containerId: 'grid-piso', badgeId: 'badge-count-p', sectionId: 'zone-section-p' },
+            { key: 't', label: 'Trasero (T)', prefix: 't', max: 10, containerId: 'grid-trasero', badgeId: 'badge-count-t', sectionId: 'zone-section-t' }
+        ];
+
+        // Elementos UI Clientes
         const form = document.getElementById('parking-form');
         const clientIdInput = document.getElementById('client-id');
         const nombreInput = document.getElementById('nombre');
@@ -314,6 +443,7 @@
         const searchInput = document.getElementById('search-input');
         const tableBody = document.getElementById('clients-table-body');
 
+        // Elementos UI Caja
         const cajaForm = document.getElementById('caja-form');
         const cajaFechaPago = document.getElementById('caja-fecha-pago');
         const cajaTipo = document.getElementById('caja-tipo');
@@ -325,29 +455,53 @@
         const cajaTableBody = document.getElementById('caja-table-body');
         const filterMonth = document.getElementById('filter-month');
 
+        // Modal Bootstrap
+        const appModal = new bootstrap.Modal(document.getElementById('appModal'));
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalFooter = document.getElementById('modal-footer');
+
         const today = new Date();
         cajaFechaPago.value = today.toISOString().split('T')[0];
         filterMonth.value = today.toISOString().slice(0, 7);
 
         const formatMoney = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 
+        function showMessage(title, text) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = `<p class="m-0 fs-5">${text}</p>`;
+            modalFooter.innerHTML = `<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Entendido</button>`;
+            appModal.show();
+        }
+
+        function showConfirm(title, text, onConfirm) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = `<p class="m-0 fs-5">${text}</p>`;
+            modalFooter.innerHTML = `
+                <button type="button" class="btn btn-secondary btn-sm me-2" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm" id="btn-modal-confirm">Confirmar</button>
+            `;
+            appModal.show();
+            document.getElementById('btn-modal-confirm').onclick = () => {
+                appModal.hide();
+                onConfirm();
+            };
+        }
+
         function generateLocationOptions() {
             ubicacionSelect.innerHTML = '<option value="" disabled selected>Seleccione la ubicación...</option>';
-            const addGroup = (label, prefix, max) => {
+            ZONES.forEach(zone => {
                 let optGroup = document.createElement('optgroup');
-                optGroup.label = label;
-                for (let i = 1; i <= max; i++) {
+                optGroup.label = zone.label;
+                for (let i = 1; i <= zone.max; i++) {
                     let opt = document.createElement('option');
-                    opt.value = `${prefix}${i}`;
-                    opt.textContent = `${label.split(' ')[0]} - Espacio ${prefix.toUpperCase()}${i}`;
+                    let code = `${zone.prefix}${i}`;
+                    opt.value = code;
+                    opt.textContent = `${zone.label.split(' ')[0]} - Espacio ${code.toUpperCase()}`;
                     optGroup.appendChild(opt);
                 }
                 ubicacionSelect.appendChild(optGroup);
-            };
-
-            addGroup('Sótano (S)', 's', 11);
-            addGroup('Piso (P)', 'p', 15);
-            addGroup('Trasero (T)', 't', 10);
+            });
         }
 
         const getSafe = (obj, ...keys) => {
@@ -383,8 +537,8 @@
                     <td>${fecha || '---'}</td>
                     <td class="text-muted small">${obs || 'Ninguna'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${client.id}"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${client.id}"><i class="fas fa-trash-alt"></i></button>
+                        <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${client.id}" title="Editar cliente"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${client.id}" title="Eliminar cliente"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 `;
                 tableBody.appendChild(tr);
@@ -393,6 +547,160 @@
             document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => editClient(btn.dataset.id)));
             document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => deleteClient(btn.dataset.id)));
         }
+
+        /* ----------------------------------------------------
+           NUEVA FUNCIONALIDAD: RENDERIZAR MAPA / UBICACIONES
+        ---------------------------------------------------- */
+        function renderLocationsMap() {
+            let totalSlots = 0;
+            let occupiedCount = 0;
+
+            // Crear un mapa rápido de ubicaciones ocupadas -> cliente
+            const occupiedMap = {};
+            clients.forEach(c => {
+                const ub = getSafe(c, 'ubicacion', 'location').toLowerCase();
+                if (ub) {
+                    occupiedMap[ub] = c;
+                }
+            });
+
+            ZONES.forEach(zone => {
+                const container = document.getElementById(zone.containerId);
+                const badgeCount = document.getElementById(zone.badgeId);
+                if (!container) return;
+
+                container.innerHTML = '';
+                let zoneOccupied = 0;
+
+                for (let i = 1; i <= zone.max; i++) {
+                    totalSlots++;
+                    const code = `${zone.prefix}${i}`.toLowerCase();
+                    const client = occupiedMap[code];
+                    const isOccupied = !!client;
+
+                    if (isOccupied) {
+                        zoneOccupied++;
+                        occupiedCount++;
+                    }
+
+                    const col = document.createElement('div');
+                    col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+
+                    if (isOccupied) {
+                        const nombre = getSafe(client, 'nombre', 'name');
+                        const placa = getSafe(client, 'placa', 'plate');
+                        const modelo = getSafe(client, 'modelo', 'model');
+                        const fecha = getSafe(client, 'fecha', 'date');
+
+                        col.innerHTML = `
+                            <div class="card slot-card slot-occupied shadow-sm h-100 text-center">
+                                <div class="card-body p-2 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge slot-badge-occupied text-white fw-bold">${code.toUpperCase()}</span>
+                                            <span class="badge bg-danger small" style="font-size: 0.65rem;">Ocupado</span>
+                                        </div>
+                                        <h6 class="fw-bold mb-1 text-truncate" title="${nombre}">${nombre}</h6>
+                                        <div class="badge bg-dark mb-1">${placa}</div>
+                                        <div class="small text-muted text-truncate mb-1" title="${modelo}">${modelo}</div>
+                                        <div class="text-danger small fw-bold"><i class="far fa-calendar-alt me-1"></i>${fecha || 'N/A'}</div>
+                                    </div>
+                                    <div class="mt-2 pt-2 border-top">
+                                        <button class="btn btn-xs btn-outline-primary w-100 py-1 style-btn-map-edit" data-id="${client.id}" style="font-size: 0.75rem;">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        col.innerHTML = `
+                            <div class="card slot-card slot-free shadow-sm h-100 text-center">
+                                <div class="card-body p-2 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="badge slot-badge-free text-white fw-bold">${code.toUpperCase()}</span>
+                                            <span class="badge bg-success small" style="font-size: 0.65rem;">Libre</span>
+                                        </div>
+                                        <div class="py-2 text-success opacity-50">
+                                            <i class="fas fa-motorcycle fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 pt-2 border-top">
+                                        <button class="btn btn-xs btn-outline-success w-100 py-1 style-btn-map-assign" data-code="${code}" style="font-size: 0.75rem;">
+                                            <i class="fas fa-plus me-1"></i>Asignar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    container.appendChild(col);
+                }
+
+                if (badgeCount) {
+                    badgeCount.textContent = `${zoneOccupied}/${zone.max} Ocupados`;
+                }
+            });
+
+            // Actualizar tarjetas estadísticas del informe
+            const freeSlots = totalSlots - occupiedCount;
+            const percentage = totalSlots > 0 ? Math.round((occupiedCount / totalSlots) * 100) : 0;
+
+            document.getElementById('stats-ocupados').textContent = occupiedCount;
+            document.getElementById('stats-libres').textContent = freeSlots;
+            document.getElementById('stats-porcentaje').textContent = `${percentage}%`;
+
+            // Asignar eventos a los botones dentro de las tarjetas del mapa
+            document.querySelectorAll('.style-btn-map-edit').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabBtn = document.getElementById('tab-clientes');
+                    if (tabBtn) {
+                        const tab = new bootstrap.Tab(tabBtn);
+                        tab.show();
+                    }
+                    editClient(btn.dataset.id);
+                });
+            });
+
+            document.querySelectorAll('.style-btn-map-assign').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    resetForm();
+                    ubicacionSelect.value = btn.dataset.code;
+                    const tabBtn = document.getElementById('tab-clientes');
+                    if (tabBtn) {
+                        const tab = new bootstrap.Tab(tabBtn);
+                        tab.show();
+                    }
+                    nombreInput.focus();
+                });
+            });
+        }
+
+        // Filtros visuales para las zonas del mapa
+        function filterMapZones(zoneKey) {
+            ZONES.forEach(z => {
+                const sec = document.getElementById(z.sectionId);
+                if (sec) {
+                    if (zoneKey === 'all' || z.key === zoneKey) {
+                        sec.classList.remove('d-none');
+                    } else {
+                        sec.classList.add('d-none');
+                    }
+                }
+            });
+
+            document.getElementById('filter-zone-all').classList.toggle('active', zoneKey === 'all');
+            document.getElementById('filter-zone-s').classList.toggle('active', zoneKey === 's');
+            document.getElementById('filter-zone-p').classList.toggle('active', zoneKey === 'p');
+            document.getElementById('filter-zone-t').classList.toggle('active', zoneKey === 't');
+        }
+
+        document.getElementById('filter-zone-all').addEventListener('click', () => filterMapZones('all'));
+        document.getElementById('filter-zone-s').addEventListener('click', () => filterMapZones('s'));
+        document.getElementById('filter-zone-p').addEventListener('click', () => filterMapZones('p'));
+        document.getElementById('filter-zone-t').addEventListener('click', () => filterMapZones('t'));
 
         function updateCajaClientesSelect() {
             const zona = (cajaZona.value || '').toLowerCase();
@@ -453,7 +761,7 @@
                         </td>
                         <td class="small text-muted">${getSafe(m, 'observaciones') || '-'}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-danger btn-delete-mov" data-id="${m.id}"><i class="fas fa-trash-alt"></i></button>
+                            <button class="btn btn-sm btn-outline-danger btn-delete-mov" data-id="${m.id}" title="Eliminar registro"><i class="fas fa-trash-alt"></i></button>
                         </td>
                     `;
                     cajaTableBody.appendChild(tr);
@@ -471,13 +779,15 @@
 
         filterMonth.addEventListener('change', renderCaja);
 
-        // Subscripciones a datos
+        // Subscripciones a datos en tiempo real
         onSnapshot(clientsCollection, (snapshot) => {
             clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderTable();
+            renderLocationsMap();
             updateCajaClientesSelect();
         }, (err) => {
             renderTable([]);
+            renderLocationsMap();
         });
 
         onSnapshot(cajaCollection, (snapshot) => {
@@ -493,9 +803,9 @@
             const id = clientIdInput.value;
             const nuevaUbicacion = ubicacionSelect.value;
 
-            const ocupada = clients.find(c => getSafe(c, 'ubicacion', 'location') === nuevaUbicacion && c.id !== id);
+            const ocupada = clients.find(c => getSafe(c, 'ubicacion', 'location').toLowerCase() === nuevaUbicacion.toLowerCase() && c.id !== id);
             if (ocupada) {
-                alert(`¡Atención! El espacio ${nuevaUbicacion.toUpperCase()} ya está ocupado.`);
+                showMessage('Espacio Ocupado', `¡Atención! El espacio <strong>${nuevaUbicacion.toUpperCase()}</strong> ya está ocupado por ${getSafe(ocupada, 'nombre', 'name')}.`);
                 return;
             }
 
@@ -513,7 +823,9 @@
                 if (id) await updateDoc(doc(db, "clientes_parqueadero", id), clientData);
                 else await addDoc(clientsCollection, clientData);
                 resetForm();
-            } catch (err) { alert("Error al guardar cliente: " + err.message); }
+            } catch (err) { 
+                showMessage('Error', "Error al guardar cliente: " + err.message); 
+            }
             finally { btnSave.disabled = false; }
         });
 
@@ -522,7 +834,7 @@
 
             const valorNum = parseInt(cajaValor.value);
             if (isNaN(valorNum) || valorNum <= 0) {
-                alert("Por favor ingresa un monto válido mayor a 0.");
+                showMessage('Monto Inválido', "Por favor ingresa un monto válido mayor a 0.");
                 return;
             }
 
@@ -544,20 +856,30 @@
                 cajaTipo.value = 'ingreso';
                 updateCajaClientesSelect();
             } catch (err) {
-                alert("Error al guardar el movimiento en caja.");
+                showMessage('Error', "Error al guardar el movimiento en caja.");
             }
         });
 
-        async function deleteClient(id) {
-            if (confirm('¿Estás seguro de eliminar este cliente?')) {
-                await deleteDoc(doc(db, "clientes_parqueadero", id));
-            }
+        function deleteClient(id) {
+            const client = clients.find(c => c.id === id);
+            const name = client ? getSafe(client, 'nombre', 'name') : 'este cliente';
+            showConfirm('Eliminar Cliente', `¿Estás seguro de eliminar a <strong>${name}</strong>? Se liberará su espacio asignado.`, async () => {
+                try {
+                    await deleteDoc(doc(db, "clientes_parqueadero", id));
+                } catch(e) {
+                    showMessage('Error', 'No se pudo eliminar el cliente.');
+                }
+            });
         }
 
-        async function deleteMovimiento(id) {
-            if (confirm('¿Deseas eliminar este registro de caja?')) {
-                await deleteDoc(doc(db, "caja_parqueadero", id));
-            }
+        function deleteMovimiento(id) {
+            showConfirm('Eliminar Transacción', '¿Deseas eliminar este registro de caja?', async () => {
+                try {
+                    await deleteDoc(doc(db, "caja_parqueadero", id));
+                } catch(e) {
+                    showMessage('Error', 'No se pudo eliminar la transacción.');
+                }
+            });
         }
 
         function editClient(id) {
@@ -571,7 +893,7 @@
             fechaInput.value = getSafe(client, 'fecha', 'date', 'nextPayment');
             observacionesInput.value = getSafe(client, 'observaciones', 'obs', 'notes');
 
-            formTitle.innerHTML = '<i class="fas fa-user-edit"></i> Modificar Cliente';
+            formTitle.innerHTML = '<i class="fas fa-user-edit me-1"></i> Modificar Cliente';
             btnSave.className = 'btn btn-warning text-white';
             btnCancel.classList.remove('d-none');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -580,7 +902,7 @@
         function resetForm() {
             form.reset();
             clientIdInput.value = '';
-            formTitle.innerHTML = '<i class="fas fa-user-plus"></i> Registrar Cliente';
+            formTitle.innerHTML = '<i class="fas fa-user-plus me-1"></i> Registrar Cliente';
             btnSave.className = 'btn btn-success';
             btnCancel.classList.add('d-none');
         }
@@ -598,6 +920,7 @@
             renderTable(filtered);
         });
 
+        // Inicialización
         generateLocationOptions();
     </script>
 </body>
