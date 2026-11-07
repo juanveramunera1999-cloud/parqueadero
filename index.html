@@ -355,7 +355,7 @@
         </div>
     </div>
 
-    <!-- Scripts CDN Bootstrap y Firebase Modular -->
+    <!-- Bootstrap CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script type="module">
@@ -418,7 +418,10 @@
 
         const formatMoney = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 
-        const cleanLoc = (str) => (str || '').toString().trim().toLowerCase();
+        const cleanLoc = (str) => {
+            if (!str) return '';
+            return String(str).trim().toLowerCase();
+        };
 
         const getSafe = (obj, ...keys) => {
             if (!obj) return '';
@@ -428,16 +431,12 @@
             return '';
         };
 
-        // Función ultrasegura para formatear fecha de cobro
         function calculateNextDate(diaCobroStr, storedFecha = '') {
             try {
                 if (storedFecha && storedFecha.includes('-')) return storedFecha;
 
                 let dia = parseInt(diaCobroStr);
-                if (isNaN(dia) || dia < 1 || dia > 31) {
-                    if (storedFecha) return storedFecha;
-                    dia = 5; 
-                }
+                if (isNaN(dia) || dia < 1 || dia > 31) dia = 5;
 
                 const hoy = new Date();
                 let y = hoy.getFullYear();
@@ -515,10 +514,12 @@
                 const totalSpaces = 36;
 
                 const mapLocs = {};
-                clients.forEach(c => {
-                    const locKey = cleanLoc(getSafe(c, 'ubicacion', 'location'));
-                    if (locKey) mapLocs[locKey] = c;
-                });
+                if (Array.isArray(clients)) {
+                    clients.forEach(c => {
+                        const locKey = cleanLoc(getSafe(c, 'ubicacion', 'location'));
+                        if (locKey) mapLocs[locKey] = c;
+                    });
+                }
 
                 const renderZone = (container, prefix, max) => {
                     for (let i = 1; i <= max; i++) {
@@ -611,7 +612,7 @@
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }));
             } catch (err) {
-                console.error("Error al renderizar mapa:", err);
+                console.error("Error renderMap:", err);
             }
         }
 
@@ -653,7 +654,7 @@
                 document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => editClient(btn.dataset.id)));
                 document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => deleteClient(btn.dataset.id, btn.dataset.code)));
             } catch (err) {
-                console.error("Error al renderizar tabla:", err);
+                console.error("Error renderTable:", err);
             }
         }
 
@@ -677,7 +678,7 @@
                     cajaCliente.appendChild(opt);
                 });
             } catch (err) {
-                console.error("Error al actualizar select caja:", err);
+                console.error("Error updateCajaClientesSelect:", err);
             }
         }
 
@@ -736,11 +737,16 @@
                 document.getElementById('total-balance').textContent = formatMoney(balance);
                 document.getElementById('tfoot-balance').textContent = formatMoney(balance);
             } catch (err) {
-                console.error("Error al renderizar caja:", err);
+                console.error("Error renderCaja:", err);
             }
         }
 
         filterMonth.addEventListener('change', renderCaja);
+
+        // Renderizado inicial forzado antes de sincronizar con Firebase
+        generateLocationOptions();
+        renderMap();
+        renderTable();
 
         onSnapshot(clientsCollection, (snapshot) => {
             clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -748,7 +754,7 @@
             renderMap();
             updateCajaClientesSelect();
         }, (err) => {
-            console.error("Error onSnapshot clientes:", err);
+            console.error("Error Firebase Clientes:", err);
             renderTable([]);
             renderMap();
         });
@@ -758,7 +764,7 @@
             movimientos.sort((a, b) => new Date(getSafe(b, 'fechaPago', 'timestamp') || 0) - new Date(getSafe(a, 'fechaPago', 'timestamp') || 0));
             renderCaja();
         }, (err) => {
-            console.error("Error onSnapshot caja:", err);
+            console.error("Error Firebase Caja:", err);
             renderCaja();
         });
 
@@ -871,4 +877,60 @@
             const codeText = code ? ` del espacio ${code}` : '';
             if (confirm(`¿Deseas retirar el cliente${codeText}? El espacio quedará DISPONIBLE automáticamente.`)) {
                 try {
-                    await deleteDoc(doc(db, "clientes_parqueadero
+                    await deleteDoc(doc(db, "clientes_parqueadero", id));
+                } catch (err) {
+                    alert("Error en Firebase: " + err.message);
+                }
+            }
+        }
+
+        async function deleteMovimiento(id) {
+            if (confirm('¿Deseas eliminar este registro de caja?')) {
+                try {
+                    await deleteDoc(doc(db, "caja_parqueadero", id));
+                } catch (err) {
+                    alert("Error al eliminar movimiento: " + err.message);
+                }
+            }
+        }
+
+        function editClient(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            clientIdInput.value = client.id;
+            nombreInput.value = getSafe(client, 'nombre', 'name', 'clientName');
+            placaInput.value = getSafe(client, 'placa', 'plate');
+            modeloInput.value = getSafe(client, 'modelo', 'model');
+            ubicacionSelect.value = cleanLoc(getSafe(client, 'ubicacion', 'location'));
+            diaCobroInput.value = getSafe(client, 'diaCobro', 'dia') || '5';
+            observacionesInput.value = getSafe(client, 'observaciones', 'obs', 'notes');
+
+            formTitle.innerHTML = '<i class="fas fa-user-edit"></i> Modificar Cliente';
+            btnSave.className = 'btn btn-warning text-white';
+            btnCancel.classList.remove('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            form.reset();
+            clientIdInput.value = '';
+            formTitle.innerHTML = '<i class="fas fa-user-plus"></i> Registrar Cliente';
+            btnSave.className = 'btn btn-success';
+            btnCancel.classList.add('d-none');
+        }
+
+        btnCancel.addEventListener('click', resetForm);
+
+        searchInput.addEventListener('keyup', () => {
+            const query = searchInput.value.toLowerCase();
+            const filtered = clients.filter(c => {
+                const n = getSafe(c, 'nombre', 'name').toLowerCase();
+                const p = getSafe(c, 'placa', 'plate').toLowerCase();
+                const u = getSafe(c, 'ubicacion', 'location').toLowerCase();
+                return n.includes(query) || p.includes(query) || u.includes(query);
+            });
+            renderTable(filtered);
+        });
+    </script>
+</body>
+</html>
