@@ -37,12 +37,51 @@
 </head>
 <body class="bg-light">
 
-    <div class="container py-4">
-        <header class="pb-3 mb-4 border-bottom text-center">
-            <h1 class="h3 fw-bold text-primary">
-                <i class="fas fa-motorcycle"></i> Control de Parqueadero y Caja
-            </h1>
-            <p class="text-muted m-0">Gestión de mensualidades, registro de clientes, ocupación e informe de caja</p>
+    <!-- PANTALLA DE INICIO DE SESIÓN (LOGIN) -->
+    <div id="login-screen" class="container py-5">
+        <div class="row justify-content-center py-5">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow border-0">
+                    <div class="card-header bg-primary text-white text-center py-3">
+                        <h4 class="mb-0 fw-bold"><i class="fas fa-motorcycle me-2"></i>Acceso Parqueadero</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="login-form">
+                            <div class="mb-3">
+                                <label for="login-email" class="form-label fw-bold">Correo Electrónico</label>
+                                <input type="email" class="form-control" id="login-email" required placeholder="correo@ejemplo.com">
+                            </div>
+                            <div class="mb-3">
+                                <label for="login-password" class="form-label fw-bold">Contraseña</label>
+                                <input type="password" class="form-control" id="login-password" required placeholder="••••••••">
+                            </div>
+                            <div id="login-error" class="alert alert-danger d-none small py-2"></div>
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary fw-bold" id="btn-login">
+                                    <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL (OCULTA HASTA INICIAR SESIÓN) -->
+    <div id="app-screen" class="container py-4 d-none">
+        <header class="pb-3 mb-4 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 fw-bold text-primary m-0">
+                    <i class="fas fa-motorcycle"></i> Control de Parqueadero y Caja
+                </h1>
+                <p class="text-muted m-0 small">Gestión de mensualidades, registro de clientes, ocupación e informe de caja</p>
+            </div>
+            <div>
+                <button class="btn btn-outline-danger btn-sm fw-bold" id="btn-logout">
+                    <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                </button>
+            </div>
         </header>
 
         <!-- Navegación entre Pestañas -->
@@ -361,6 +400,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
+            getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
             getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -375,13 +417,86 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const clientsCollection = collection(db, "clientes_parqueadero");
-        const cajaCollection = collection(db, "caja_parqueadero");
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const loginForm = document.getElementById('login-form');
+        const loginEmail = document.getElementById('login-email');
+        const loginPassword = document.getElementById('login-password');
+        const loginError = document.getElementById('login-error');
+        const btnLogout = document.getElementById('btn-logout');
+
+        let clientsCollection;
+        let cajaCollection;
+        let unsubscribeClients = null;
+        let unsubscribeCaja = null;
 
         let clients = [];
         let movimientos = [];
+
+        // Control de Sesión con Firebase Auth
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                loginScreen.classList.add('d-none');
+                appScreen.classList.remove('d-none');
+                initApp();
+            } else {
+                appScreen.classList.add('d-none');
+                loginScreen.classList.remove('d-none');
+                if (unsubscribeClients) unsubscribeClients();
+                if (unsubscribeCaja) unsubscribeCaja();
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.classList.add('d-none');
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                loginForm.reset();
+            } catch (err) {
+                loginError.textContent = "Credenciales incorrectas. Verifica tu correo y contraseña.";
+                loginError.classList.remove('d-none');
+            }
+        });
+
+        btnLogout.addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        function initApp() {
+            clientsCollection = collection(db, "clientes_parqueadero");
+            cajaCollection = collection(db, "caja_parqueadero");
+
+            generateLocationOptions();
+            renderMap();
+            renderTable();
+
+            unsubscribeClients = onSnapshot(clientsCollection, (snapshot) => {
+                clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTable();
+                renderMap();
+                updateCajaClientesSelect();
+            }, (err) => {
+                console.error("Error Firebase Clientes:", err);
+                renderTable([]);
+                renderMap();
+            });
+
+            unsubscribeCaja = onSnapshot(cajaCollection, (snapshot) => {
+                movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                movimientos.sort((a, b) => new Date(getSafe(b, 'fechaPago', 'timestamp') || 0) - new Date(getSafe(a, 'fechaPago', 'timestamp') || 0));
+                renderCaja();
+            }, (err) => {
+                console.error("Error Firebase Caja:", err);
+                renderCaja();
+            });
+        }
 
         const form = document.getElementById('parking-form');
         const clientIdInput = document.getElementById('client-id');
@@ -418,10 +533,7 @@
 
         const formatMoney = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 
-        const cleanLoc = (str) => {
-            if (!str) return '';
-            return String(str).trim().toLowerCase();
-        };
+        const cleanLoc = (str) => (str || '').toString().trim().toLowerCase();
 
         const getSafe = (obj, ...keys) => {
             if (!obj) return '';
@@ -742,31 +854,6 @@
         }
 
         filterMonth.addEventListener('change', renderCaja);
-
-        // Renderizado inicial forzado antes de sincronizar con Firebase
-        generateLocationOptions();
-        renderMap();
-        renderTable();
-
-        onSnapshot(clientsCollection, (snapshot) => {
-            clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderTable();
-            renderMap();
-            updateCajaClientesSelect();
-        }, (err) => {
-            console.error("Error Firebase Clientes:", err);
-            renderTable([]);
-            renderMap();
-        });
-
-        onSnapshot(cajaCollection, (snapshot) => {
-            movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            movimientos.sort((a, b) => new Date(getSafe(b, 'fechaPago', 'timestamp') || 0) - new Date(getSafe(a, 'fechaPago', 'timestamp') || 0));
-            renderCaja();
-        }, (err) => {
-            console.error("Error Firebase Caja:", err);
-            renderCaja();
-        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
